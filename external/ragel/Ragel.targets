@@ -1,0 +1,138 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <BuildSystem>MSBuild</BuildSystem>
+    <TaskVersion>4.0.0.0</TaskVersion>
+    <TaskKeyToken>eb42632606e9261f</TaskKeyToken>
+    <RagelBuildTaskAssemblyName Condition="'$(RagelBuildTaskAssemblyName)'==''">RagelBuildTask, Version=$(TaskVersion), Culture=neutral, PublicKeyToken=$(TaskKeyToken)</RagelBuildTaskAssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <LoadTimeSensitiveTargets>
+      $(LoadTimeSensitiveTargets);
+      RagelCompile;
+    </LoadTimeSensitiveTargets>
+    <LoadTimeSensitiveProperties>
+      $(LoadTimeSensitiveProperties);
+      RagelCompileCompileDependsOn;
+    </LoadTimeSensitiveProperties>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <RagelBuildTaskLocation Condition="'$(RagelBuildTaskPath)'==''">$(MSBuildBinPath)</RagelBuildTaskLocation>
+    <RagelBuildTaskLocation Condition="'$(RagelBuildTaskPath)'!=''">$(RagelBuildTaskPath)</RagelBuildTaskLocation>
+    <RagelToolLocation Condition="'$(RagelToolPath)'==''">$(MSBuildBinPath)\Ragel\ragel.exe</RagelToolLocation>
+    <RagelToolLocation Condition="'$(RagelToolPath)'!=''">$(RagelToolPath)</RagelToolLocation>
+
+    <RagelOutputLocation Condition="'$(RagelOutputPath)'!=''">$(RagelOutputPath)</RagelOutputLocation>
+    <RagelOutputLocation Condition="'$(RagelOutputPath)'==''">$(ProjectDir)</RagelOutputLocation>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <RagelGenCodeFileNames Condition="'$(RagelGenCodeFileNames)'==''">$(MSBuildProjectFile).RagelGeneratedCodeFileListAbsolute.txt</RagelGenCodeFileNames>
+  </PropertyGroup>
+
+  <UsingTask Condition="'$(RagelBuildTaskPath)'==''" TaskName="Ragel.Build.Tasks.RagelTask" AssemblyName="$(RagelBuildTaskAssemblyName)" />
+  <UsingTask Condition="'$(RagelBuildTaskPath)'!=''" TaskName="Ragel.Build.Tasks.RagelTask" AssemblyFile="$(RagelBuildTaskPath)\RagelBuildTask.dll" />
+
+  <PropertyGroup>
+    <PrepareResourcesDependsOn>
+      RagelCompile;
+      RagelCompileAddFilesGenerated;
+      $(PrepareResourcesDependsOn)
+    </PrepareResourcesDependsOn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <RagelCompileDependsOn>
+      RagelCompileReadGeneratedFileList
+    </RagelCompileDependsOn>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(BuildingInsideVisualStudio)'=='true'">
+    <AvailableItemName Include="Ragel" />
+  </ItemGroup>
+
+  <ItemDefinitionGroup>
+    <Ragel>
+      <Generator>MSBuild:Compile</Generator>
+      <CustomToolNamespace>$(RootNamespace)</CustomToolNamespace>
+    </Ragel>
+  </ItemDefinitionGroup>
+
+  <Target Name="RagelCompileReadGeneratedFileList">
+    <ReadLinesFromFile File="$(IntermediateOutputPath)$(RagelGenCodeFileNames)">
+      <Output TaskParameter="Lines" ItemName="RagelOutputCodeFilesList"/>
+    </ReadLinesFromFile>
+  </Target>
+
+  <PropertyGroup>
+    <!-- Add grammar compilation to the CoreCompileDependsOn so that the IDE inproc compilers (particularly VB)
+         can "see" the generated source files. -->
+    <CoreCompileDependsOn Condition="'$(BuildingInsideVisualStudio)' == 'true' ">
+      DesignTimeGrammarCompilation;
+      $(CoreCompileDependsOn)
+    </CoreCompileDependsOn>
+  </PropertyGroup>
+
+  <Target Name="DesignTimeGrammarCompilation">
+    <!-- Only if we are not actually performing a compile i.e. we are in design mode -->
+    <CallTarget Condition="'$(BuildingProject)' != 'true'"
+                Targets="RagelCompile" />
+  </Target>
+
+  <Target Name="RagelCompile"
+          DependsOnTargets="$(RagelCompileDependsOn)"
+          Condition="'@(Ragel)' != ''"
+          Inputs="@(Ragel);@(RagelTokens);@(RagelAbstractGrammar)"
+          Outputs="@(RagelOutputCodeFilesList);
+                  $(IntermediateOutputPath)$(RagelGenCodeFileNames);">
+
+    <ItemGroup>
+      <RagelGeneratedCodeFiles Remove="@(RagelGeneratedCodeFiles)" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_IntellisenseOnlyCompile>false</_IntellisenseOnlyCompile>
+      <_IntellisenseOnlyCompile Condition="'$(BuildingProject)' != 'true'">true</_IntellisenseOnlyCompile>
+    </PropertyGroup>
+    
+    <RagelTask
+      ToolPath="$(RagelToolLocation)"
+      BuildTaskPath="$(RagelBuildTaskLocation)"      
+      OutputPath="$(RagelOutputLocation)"
+      TargetLanguage="%(Ragel.TargetLanguage)"
+      TargetFrameworkVersion="$(TargetFrameworkVersion)"
+      TargetNamespace="%(Ragel.CustomToolNamespace)"
+      SourceCodeFiles="@(Ragel)"
+      ContinueOnError="$(_IntellisenseOnlyCompile)">
+      <Output ItemName="RagelGeneratedCodeFiles" TaskParameter="GeneratedCodeFiles" />
+    </RagelTask>
+
+    <WriteLinesToFile
+      Condition="'$(_IntellisenseOnlyCompile)' != 'true'"
+      File="$(IntermediateOutputPath)$(RagelGenCodeFileNames)"
+      Lines="@(RagelGeneratedCodeFiles)"
+      Overwrite="true"/>
+  </Target>
+
+  <Target Name="RagelCompileAddFilesGenerated"
+          AfterTargets="RagelCompile"
+          Condition="'@(Ragel)' != ''">
+
+    <ItemGroup>
+      <RagelGeneratedCodeFiles Condition="'@(RagelGeneratedCodeFiles)' == ''" Include="@(RagelOutputCodeFilesList)" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <FileWrites Include="@(RagelGeneratedCodeFiles);
+                           $(IntermediateOutputPath)$(RagelGenCodeFileNames);" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Include="@(RagelGeneratedCodeFiles)" />
+      <!-- The WinFX "GenerateTemporaryTargetAssembly" target requires generated code files be added here. -->
+      <_GeneratedCodeFiles Include="@(RagelGeneratedCodeFiles)" />
+    </ItemGroup>
+
+  </Target>
+</Project>

@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paralizer", "Paralizer.csproj", "{E8898A1D-A58C-443C-BC84-BE4E35FE416C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paralizer.UI", "..\Paralizer.UI\Paralizer.UI.csproj", "{5D88FB6D-17B6-4D1D-BB0C-7B4394337178}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E8898A1D-A58C-443C-BC84-BE4E35FE416C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E8898A1D-A58C-443C-BC84-BE4E35FE416C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E8898A1D-A58C-443C-BC84-BE4E35FE416C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E8898A1D-A58C-443C-BC84-BE4E35FE416C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D88FB6D-17B6-4D1D-BB0C-7B4394337178}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D88FB6D-17B6-4D1D-BB0C-7B4394337178}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D88FB6D-17B6-4D1D-BB0C-7B4394337178}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D88FB6D-17B6-4D1D-BB0C-7B4394337178}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
