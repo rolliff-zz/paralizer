@@ -1,0 +1,6 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <StartArguments>json "C:\Users\Robby\Documents\Paradox Interactive\Hearts of Iron III\BlackICE\save games\Germany1951_06_06_14.hoi3" "C:\Users\Robby\Documents\Paradox Interactive\Hearts of Iron III\BlackICE\save games\Germany1951_06_06_14.json"</StartArguments>
+  </PropertyGroup>
+</Project>

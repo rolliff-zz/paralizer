@@ -1,6 +1,7 @@
  /*************************************************************************
+	Date  : 1/17/2015 12:00:00 AM  
 	Author: Robert A. Olliff
-	Date  : 1/16/2015 12:00:00 AM  
+	Email : robert.olliff@gmail.com
 
 	This file probably has code in it and does stuff.
  ************************************************************************ */
@@ -14,54 +15,95 @@ using System.Threading.Tasks;
 using RagelP;
 using Newtonsoft.Json.Linq;
 using System.CodeDom.Compiler;
+using System.Text.RegularExpressions;
 
 namespace Paralizer
 {
     /// <summary>
-    /// Not a fan of this bizarre data format.
+    /// The strategy used to parse this bizarre data format is,
+    /// "What would this look like in JSON?" and
+    /// "How could that JSON be converted back to the original?"
     /// </summary>
     /// 
     /// 
-    /// Notes:
+    /// @see Paralizer.ObjectType
     /// 
-    /// Primitives
-    ///  All must be true:
-    ///      Token is on the right hand side of an '=' sign
-    ///      Token is not '{'
-    ///
-    /// Types
-    ///  Types are checked in the same order as defined below.
-    ///
-    ///  String: Primitive token surrounded by double quotes
-    ///  Date  : Regex matches /\d\d\d\d\.\d+\.\d+\.\d+/
-    ///  Double: Number which can be parsed via .NET Double.TryParse
-    ///  Int32 : Number which can be parsed via .NET Int32.TryParse
-    ///  
+    /// To answer the first question, we first have to figure out how
+    /// the Paradox format works.
+    /// 
+    /// Propeties:
+    /// 
+    /// @code
+    ///     name = value
+    /// @endcode
+    /// 
+    /// Name can be a String, Number, or Date (Dates discussed later) 
+    /// Value can be String, Number, Date, Object, Array
     /// Objects
     ///  Objects begin with a '{' token and end with a '}' on the same level
-    ///  Objects contain zero or more Identifier(s)
-    ///  When an object has duplicate identifiers, each identifier is accessed using the name and its ordinal in the object.
-    ///  indentifier= 
-    ///  {
-    ///      dupe=
-    ///      {
-    ///         blah="crap"
-    ///      }
-    ///      dupe=
-    ///      {
-    ///         blah="crap"
-    ///      }
-    ///      not_dupe=
-    ///      {
-    ///         blah="crap"
-    ///      }
+    ///  Objects contain zero or more Properies(s)
+    ///  When an object has two or more Properties which have the same Name, the Properties are
+    ///  collapsed into a single Property with the same name. The Value of the Property
+    ///  is an Array of the collapsed Property Values.
+    ///  
+    /// @code
+    /// 
+    /// // Object
+    /// victory_conditions={
+    ///  
+    ///    // Duplicate Property 1
+    ///    faction={               
+    ///     operation_sealion 0.1.0.0 operation_barbarossa 0.1.0.0 axis }
+    ///  
+    ///    // Duplicate Property 2
+    ///    faction={
+    ///        operation_overlord 0.1.0.0 operation_torch 0.1.0.0 allies }
+    /// 
+    ///    // Duplicate Property 3
+    ///    faction={
+    ///        operation_bagration 0.1.0.0 operation_august_storm 0.1.0.0 comintern }
+    ///  
+    ///    game_finished=no
     /// }
+    /// @endcode
     ///
-    ///  Using JSON, access would look like:
-    ///      identifiers.dupe[0].blah;
-    ///      identifiers.dupe[1].blah;
-    ///      identifiers.not_dupe;
+    /// written in JSON, this would look like:
+    /// @code
+    /// "victory_conditions" : {
+    ///     "faction" :
+    ///     [
+    ///         // Value for Dupe1,
+    ///         // Value for Dupe2,
+    ///         // Value for Dupe3
+    ///     ],
+    ///     "game_finished" : false
+    /// }
+    ///     
+    /// @endcode
+    /// Or, even better:
+    /// @code
+    /// "victory_conditions" : {
+    ///     "faction" : {
+    ///         "axis" : {
+    ///             "operation_whatever" : "0.1.0.0"
+    ///         },
+    ///         "allies" : {
+    ///             "operation_turtleneck" : "0.1.0.0"
+    ///         },
+    ///         // etc
+    ///     },
+    ///     "game_finished" : false
+    /// }
+    /// @endcode
+    /// That last example, although ideal, would require predefined knowledge of what a "faction"
+    /// object is; which is beyond the scope of this parser.
+    /// 
+    /// In the code for this project, an array of Values which were formerly the values of duplicate propeties
+    /// are referred to as "DuplicatesArray"'s, which will help us when converting from/to JSON/Paradox.
+
     ///
+    /// Grammar Notes
+    /// 
     /// My ANTLR is rusty, but a grammer might look something like:
     ///
     /// program  := (object|property)*
@@ -82,7 +124,7 @@ namespace Paralizer
     /// 
     /// 
         
-    
+    ///
     /// Simple Array
     /// ===============
     /// 
@@ -145,15 +187,20 @@ namespace Paralizer
         }
 
         public static ParadoxDataElement ParseParadox(string src)
-        {
-            Console.WriteLine("Tokenizing...");
-            return ParseParadox(RagelP.Scanner.QuickScan(src));
+        {            
+            var v = new RagelP.Scanner();
+            v.init();
+
+            Regex expression = new Regex("#(?<crap>.*?)$", RegexOptions.Multiline);
+
+            string data = expression.Replace(src, "");
+            v.exec(data);
+            
+            return ParseParadox(new TokenIterator(v.finish().List));
         }
 
         private static ParadoxDataElement ParseParadox(TokenIterator iter)
-        {
-            Console.WriteLine("Parsing...");
-
+        {   
             JObject root = new JObject();
             var Root = new ParadoxDataElement
             {
@@ -294,16 +341,19 @@ namespace Paralizer
 
         private void FinishHim(ParadoxDataElement obj)
         {
-            int total = obj.Children.Count();
-            int with_names = obj.Children.Count(n => n.Name != null);
-            if (with_names != 0 && with_names != total)
-                throw new LexerException("Either all are named or none, those are the rules.");
+            //int total = obj.Children.Count();
+            //int with_names = obj.Children.Count(n => n.Name != null);
+            //if (with_names != 0 && with_names != total)
+            //{
+            //    var unnamed = obj.Children.Where(n => n.Name == null).ToList();
 
-            if (with_names == 0)
-            {
-                logger.WriteLine("Morphing to array {0}", obj.Name);
-                obj.Type = ObjectType.Array;
-            }
+            //}
+
+            //if (with_names == 0)
+            //{
+            //    logger.WriteLine("Morphing to array {0}", obj.Name);
+            //    obj.Type = ObjectType.Array;
+            //}
         }
     }
 }

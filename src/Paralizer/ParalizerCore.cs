@@ -1,6 +1,7 @@
  /*************************************************************************
+	Date  : 1/17/2015 12:00:00 AM  
 	Author: Robert A. Olliff
-	Date  : 1/16/2015 12:00:00 AM  
+	Email : robert.olliff@gmail.com
 
 	This file probably has code in it and does stuff.
  ************************************************************************ */
@@ -16,6 +17,7 @@ using System.Threading.Tasks;
 using RagelP;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Diagnostics;
 
 namespace Paralizer
 {
@@ -49,7 +51,106 @@ namespace Paralizer
             return builder.ToString();
         }
 
-        static readonly Encoding MyDefaultEncoding = Encoding.GetEncoding(1252);
+        public static readonly Encoding MyDefaultEncoding = Encoding.GetEncoding(1252);
+
+        public static void TestEncoding()
+        {
+            string input = @"C:\Users\Robby\Documents\Paradox Interactive\Hearts of Iron III\TRP\save games\test_input.txt";
+            string output = @"C:\Users\Robby\Documents\Paradox Interactive\Hearts of Iron III\TRP\save games\test_output.txt";
+
+            string tmp;
+            using (var s = new StreamReader(input, MyDefaultEncoding, true))
+                tmp = s.ReadToEnd();
+
+            using (var s2 = (new StreamWriter(new FileStream(output, FileMode.Create), MyDefaultEncoding)))
+                s2.Write(tmp);
+        }
+
+        public static void TestEncoding2()
+        {
+            string input = @"C:\Users\Robby\Documents\Paradox Interactive\Hearts of Iron III\TRP\save games\test_input.hoi3";
+            string output = @"C:\Users\Robby\Documents\Paradox Interactive\Hearts of Iron III\TRP\save games\autosave_out1.hoi3";
+            string output2 = @"C:\Users\Robby\Documents\Paradox Interactive\Hearts of Iron III\TRP\save games\autosave_out2.hoi3";
+            string output3 = @"C:\Users\Robby\Documents\Paradox Interactive\Hearts of Iron III\TRP\save games\autosave_out3.hoi3";
+            string output4 = @"C:\Users\Robby\Documents\Paradox Interactive\Hearts of Iron III\TRP\save games\autosave_out4.hoi3";
+            
+            string json_output = @"C:\Users\Robby\Documents\Paradox Interactive\Hearts of Iron III\TRP\save games\test_output.js";
+
+
+            Debug.WriteLine("Test 1, text to text");
+            {
+                string tmp;
+                using (var s = new StreamReader(input, MyDefaultEncoding, true))
+                    tmp = s.ReadToEnd();
+
+                using (var s2 = (new StreamWriter(new FileStream(output, FileMode.Create), MyDefaultEncoding)))
+                    s2.Write(tmp);
+            }
+            Debug.WriteLine("Test 2, from text, to text");
+            var obj = FromParadoxFile(input);            
+            ToParadox(obj, output2);
+
+            Debug.WriteLine("Test 3, from text, to json, to text");
+
+            var json = ToJson(obj);
+            File.WriteAllText(output3, json.ToString());
+
+            Debug.WriteLine("Test 4, from text, to json, from json, to text");
+            obj = FromJson(json);
+            ToParadox(obj, output4);
+        }
+
+        public static string Sanitize(TextReader input)
+        {
+            string n = input.ReadToEnd();
+            //var b = Encoding.UTF8.GetBytes(n);
+            //var x = Encoding.Convert(Encoding.UTF8, Encoding.ASCII, b);
+            //return Encoding.ASCII.GetString(x);
+            
+
+            StringBuilder sb = new StringBuilder(n.Length * 2);
+            List<char> repl = new List<char>() { '\'', 'ñ' };
+            unsafe 
+            {
+                fixed(char* p = n)
+                {
+                    char* s = p;
+                    int count = n.Length-1;
+
+                    do
+                    {
+                        if (s[count] == '=')
+                        {
+                            sb.Append(s[count]);
+                            count--;
+                            while (count >= 0 && !Char.IsWhiteSpace(s[count]))
+                            {
+
+                                if(s[count] >= 'À' || s[count] == '\'')
+                                {
+                                    var temp = new string(Convert.ToInt32((char)s[count]).ToString("X").Reverse().ToArray());
+                                    sb.Append("_X");
+                                    sb.Append(temp);
+                                    sb.Append("X_");
+                                    count--;
+                                    break;
+                                }
+                                
+                                sb.Append(s[count]);
+                                count--;
+                            }
+                        }
+                        else
+                        {
+                            sb.Append(s[count]);
+                            count--;
+                        }
+                    }while(count>=0);
+
+                }
+            }
+            return new string(sb.ToString().Reverse().ToArray());
+        }
         
         /// <summary>
         /// Write the obejct to a string
@@ -80,8 +181,18 @@ namespace Paralizer
         /// <param name="filename"></param>
         public static void ToParadox(ParadoxDataElement obj, string filename)
         {
-            var s = (new StreamWriter(new FileStream(filename, FileMode.Create), MyDefaultEncoding));
-            ToParadox(obj, s);
+            try
+            {
+                using (var s = (new StreamWriter(new FileStream(filename, FileMode.Create), MyDefaultEncoding)))
+                    ToParadox(obj, s);
+            }
+            catch (IOException x)
+            {
+                var f = Path.GetFileNameWithoutExtension(filename);
+                filename = filename.Replace(f, f + "2");
+                using (var s = (new StreamWriter(new FileStream(filename, FileMode.Create), MyDefaultEncoding)))
+                    ToParadox(obj, s);
+            }
         }
 
         /// <summary>
@@ -103,7 +214,8 @@ namespace Paralizer
 
         public static ParadoxDataElement FromParadoxFile(string path)
         {
-            return WeirdFormatParser.ParseParadox(new StreamReader(path));
+            using(var s = new StreamReader(path,MyDefaultEncoding,true))
+                return WeirdFormatParser.ParseParadox(s);
         }
         public static ParadoxDataElement FromJson(JToken json)
         {
@@ -313,8 +425,9 @@ namespace Paralizer
                 ParseJson(current, value);
                 if (current.Type == ObjectType.DuplicatesArray)
                 {
-                    foreach (var o in current.Children)
-                        obj.AddObject(o);
+                    List<ParadoxDataElement> tmp = new List<ParadoxDataElement>(current.Children);
+                    foreach (var o in tmp)
+                        o.TransferOwnership(obj);
                 }
                 else if (!String.IsNullOrEmpty(current.Name))
                 {
@@ -374,6 +487,18 @@ namespace Paralizer
                     if ((token as JProperty).Name == "_meta_")
                         return;
 
+                    if ((token as JProperty).Name == "_inline_array_")
+                    {
+                        foreach (var element in (token as JProperty).Value)
+                        {
+                            ParadoxDataElement obj2 = new ParadoxDataElement();
+                            FromJToken(obj2, element);
+                            obj.AddObject(obj2);
+
+                        }
+                        return;
+                    }
+
                     obj.AddObject(FromProperty(token as JProperty));
                     break;
                 case JTokenType.String:
@@ -409,6 +534,8 @@ namespace Paralizer
                 case ObjectType.DuplicatesArray:
                 case ObjectType.Array:
                     return SerializeArray(obj);
+                case ObjectType.InlineArray:
+                    return new JProperty("_inline_array_", SerializeArray(obj));
                 case ObjectType.Associative:
                 case ObjectType.AssociativeAnonymous:
                     return SerializeObject(obj);
@@ -443,11 +570,20 @@ namespace Paralizer
             //obj["_meta_"] = src.Metadata();
             foreach (var v in src.Children)
             {
-                var str = v.Name;
-                if (paradox_date.IsMatch(v.Name))
-                    str = v.Name.Replace(".", "_");
 
-                obj[str] = ToJToken(v);
+                if (v.Type == ObjectType.InlineArray)
+                {
+                    obj.Add(ToJToken(v));
+
+                }
+                else
+                {
+                    var str = v.Name;
+                    if (paradox_date.IsMatch(v.Name))
+                        str = v.Name.Replace(".", "_");
+
+                    obj[str] = ToJToken(v);
+                }
             }
             return obj;
         }

@@ -1,6 +1,7 @@
  /*************************************************************************
+	Date  : 1/17/2015 12:00:00 AM  
 	Author: Robert A. Olliff
-	Date  : 1/16/2015 12:00:00 AM  
+	Email : robert.olliff@gmail.com
 
 	This file probably has code in it and does stuff.
  ************************************************************************ */

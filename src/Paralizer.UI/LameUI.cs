@@ -1,14 +1,16 @@
- /*************************************************************************
-	Author: Robert A. Olliff
-	Date  : 1/16/2015 12:00:00 AM  
+/*************************************************************************
+   Date  : 1/17/2015 12:00:00 AM  
+   Author: Robert A. Olliff
+   Email : robert.olliff@gmail.com
 
-	This file probably has code in it and does stuff.
- ************************************************************************ */
+   This file probably has code in it and does stuff.
+************************************************************************ */
 //END STUPID COMMENT
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -31,7 +33,14 @@ namespace Paralizer.UI
         public LameUI()
         {
             InitializeComponent();
+
+            nodeRefresh.WorkerReportsProgress = false;
+            nodeRefresh.DoWork+=nodeRefresh_DoWork;
+            nodeRefresh.RunWorkerCompleted += nodeRefresh_RunWorkerCompleted;
+
         }
+
+        
 
         TreeNode Init(ParadoxDataElement root)
         {
@@ -45,12 +54,15 @@ namespace Paralizer.UI
             };
             RootNode = rootNode;
             TreeNode current = rootNode;
-            Iterate(rootNode, Root);
+            Iterate(rootNode, Root,1);
             return rootNode;
         }
 
-        void IterateArray(TreeNode root, ParadoxDataElement element)
+        void IterateArray(TreeNode root, ParadoxDataElement element, int depth = -1)
         {
+            if (depth == 0)
+                return;
+
             int n = 0;
             foreach (var e in element.Children)
             {
@@ -61,28 +73,35 @@ namespace Paralizer.UI
                 root.Nodes.Add(node);
             }
         }
-        void Iterate(TreeNode root, ParadoxDataElement element)
+        void AddNode(TreeNode root, ParadoxDataElement element, int depth = -1)
         {
+            TreeNode node = new TreeNode();
+            node.Text = element.Name;
+            node.Tag = element;
+            switch (element.Type)
+            {
+                case ObjectType.Array:
+                    IterateArray(node, element, depth - 1);
+                    break;
+                case ObjectType.Associative:
+                case ObjectType.AssociativeAnonymous:
+                case ObjectType.DuplicatesArray:
+                case ObjectType.Root:
+                    Iterate(node, element, depth - 1);
+                    break;
+                default:
+                    break;
+            }
+           // Debug.WriteLine("Adding Node: {0} to {1}", element.Name, (root.Tag as ParadoxDataElement).Name);
+            root.Nodes.Add(node);
+        }
+        void Iterate(TreeNode root, ParadoxDataElement element, int depth = -1)
+        {
+            if (depth == 0)
+                return;
             foreach (var e in element.Children)
             {
-                TreeNode node = new TreeNode();
-                node.Text = e.Name;
-                node.Tag = e;
-                switch (e.Type)
-                {
-                    case ObjectType.Array:
-                        IterateArray(node, e);
-                        break;
-                    case ObjectType.Associative:
-                    case ObjectType.AssociativeAnonymous:
-                    case ObjectType.DuplicatesArray:
-                        Iterate(node, e);
-                        break;
-                    default:
-                        break;
-                }
-
-                root.Nodes.Add(node);
+                AddNode(root, e, depth);
             }
         }
 
@@ -236,6 +255,55 @@ namespace Paralizer.UI
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ParalizerCore.ToParadox(RootNode.Tag as ParadoxDataElement, openFileDialog1.FileName);
+        }
+
+        BackgroundWorker nodeRefresh = new BackgroundWorker();
+        class NodeRefreshHelper : BackgroundWorker
+        {
+            public NodeRefreshHelper() { }
+            
+        };
+        void nodeRefresh_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        void nodeRefresh_DoWork(object sender, DoWorkEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void treeView_BeforeExpand(object sender, TreeViewCancelEventArgs e)
+        {
+            var data = (e.Node.Tag as ParadoxDataElement);
+            statusLabel.Text = "loading...";
+            Application.DoEvents();
+            e.Node.Nodes.Clear();
+            switch (data.Type)
+            {
+                case ObjectType.Array:
+                    IterateArray(e.Node, data, 2);
+                    break;
+                case ObjectType.Associative:
+                case ObjectType.AssociativeAnonymous:
+                case ObjectType.DuplicatesArray:
+                case ObjectType.Root:
+                    Iterate(e.Node, data, 2);
+                    break;
+                default:
+                    break;
+            }
+            statusLabel.Text = "ready";
+        }
+
+        private void test1ToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ParalizerCore.TestEncoding();
+        }
+
+        private void test2ToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ParalizerCore.TestEncoding2();
         }
 
         

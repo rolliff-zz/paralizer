@@ -1,6 +1,7 @@
  /*************************************************************************
+	Date  : 1/17/2015 12:00:00 AM  
 	Author: Robert A. Olliff
-	Date  : 1/16/2015 12:00:00 AM  
+	Email : robert.olliff@gmail.com
 
 	This file probably has code in it and does stuff.
  ************************************************************************ */
@@ -46,12 +47,14 @@ namespace Paralizer.UI
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.stuffToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadParadoxFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.saveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.spendTimeWithKidsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.btnNodeUpdate = new System.Windows.Forms.Button();
-            this.saveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.test1ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.test2ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -62,6 +65,7 @@ namespace Paralizer.UI
             this.treeView.Name = "treeView";
             this.treeView.Size = new System.Drawing.Size(624, 587);
             this.treeView.TabIndex = 0;
+            this.treeView.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.treeView_BeforeExpand);
             this.treeView.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.treeView_NodeMouseClick);
             // 
             // textBox
@@ -140,6 +144,8 @@ namespace Paralizer.UI
             this.stuffToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.loadParadoxFileToolStripMenuItem,
             this.saveToolStripMenuItem,
+            this.test1ToolStripMenuItem,
+            this.test2ToolStripMenuItem,
             this.spendTimeWithKidsToolStripMenuItem});
             this.stuffToolStripMenuItem.Name = "stuffToolStripMenuItem";
             this.stuffToolStripMenuItem.Size = new System.Drawing.Size(43, 20);
@@ -151,6 +157,13 @@ namespace Paralizer.UI
             this.loadParadoxFileToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
             this.loadParadoxFileToolStripMenuItem.Text = "Load Paradox File";
             this.loadParadoxFileToolStripMenuItem.Click += new System.EventHandler(this.loadParadoxFileToolStripMenuItem_Click);
+            // 
+            // saveToolStripMenuItem
+            // 
+            this.saveToolStripMenuItem.Name = "saveToolStripMenuItem";
+            this.saveToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
+            this.saveToolStripMenuItem.Text = "Save";
+            this.saveToolStripMenuItem.Click += new System.EventHandler(this.saveToolStripMenuItem_Click);
             // 
             // spendTimeWithKidsToolStripMenuItem
             // 
@@ -189,12 +202,19 @@ namespace Paralizer.UI
             this.btnNodeUpdate.UseVisualStyleBackColor = true;
             this.btnNodeUpdate.Click += new System.EventHandler(this.btnNodeUpdate_Click);
             // 
-            // saveToolStripMenuItem
+            // test1ToolStripMenuItem
             // 
-            this.saveToolStripMenuItem.Name = "saveToolStripMenuItem";
-            this.saveToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
-            this.saveToolStripMenuItem.Text = "Save";
-            this.saveToolStripMenuItem.Click += new System.EventHandler(this.saveToolStripMenuItem_Click);
+            this.test1ToolStripMenuItem.Name = "test1ToolStripMenuItem";
+            this.test1ToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
+            this.test1ToolStripMenuItem.Text = "Test1";
+            this.test1ToolStripMenuItem.Click += new System.EventHandler(this.test1ToolStripMenuItem_Click);
+            // 
+            // test2ToolStripMenuItem
+            // 
+            this.test2ToolStripMenuItem.Name = "test2ToolStripMenuItem";
+            this.test2ToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
+            this.test2ToolStripMenuItem.Text = "Test2";
+            this.test2ToolStripMenuItem.Click += new System.EventHandler(this.test2ToolStripMenuItem_Click);
             // 
             // LameUI
             // 
@@ -243,5 +263,7 @@ namespace Paralizer.UI
         private System.Windows.Forms.ToolStripStatusLabel statusLabel;
         private System.Windows.Forms.Button btnNodeUpdate;
         private System.Windows.Forms.ToolStripMenuItem saveToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem test1ToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem test2ToolStripMenuItem;
     }
 }
